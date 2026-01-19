@@ -1,0 +1,141 @@
+// HealthExpress India - Database Schema
+// Prisma ORM with PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Surgery categories
+enum Category {
+  GENERAL_SURGERY
+  ORTHOPEDICS
+  UROLOGY
+  ENT
+  GYNECOLOGY
+  OPHTHALMOLOGY
+  CARDIAC
+  NEURO
+  GASTRO
+  DENTAL
+  COSMETIC
+  PEDIATRIC
+  ONCOLOGY
+}
+
+// Lead status pipeline
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  ASSIGNED
+  SCHEDULED
+  COMPLETED
+  CLOSED
+}
+
+// Insurance options for leads
+enum InsuranceOption {
+  YES
+  NO
+  NOT_SURE
+}
+
+// Surgery directory entry
+model Surgery {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  category        Category
+  overview        String
+  indications     String
+  procedure       String
+  duration        String
+  hospitalStay    String
+  recovery        String
+  risks           String
+  preparation     String
+  postOpCare      String
+  costRangeMin    Int
+  costRangeMax    Int
+  insuranceLikely Boolean  @default(false)
+  symptoms        String[]
+  faqs            Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  leads           Lead[]
+}
+
+// Hospital partner entry
+model Hospital {
+  id               String   @id @default(cuid())
+  name             String
+  city             String
+  specialties      String[]
+  discountPercent  Float    @default(0)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  leads            Lead[]
+}
+
+// Patient inquiry / lead (acts as Case)
+model Lead {
+  id              String          @id @default(cuid())
+  fullName        String
+  phone           String
+  email           String?
+  city            String
+  surgeryId       String
+  surgery         Surgery         @relation(fields: [surgeryId], references: [id])
+  hospitalId      String?
+  hospital        Hospital?       @relation(fields: [hospitalId], references: [id])
+  description     String
+  insurance       InsuranceOption @default(NO)
+  hasCard         Boolean         @default(false)
+  isEmergency     Boolean         @default(false)
+  callbackTime    String?
+  status          LeadStatus      @default(NEW)
+  
+  // Revenue & Cost Logic
+  originalCost    Float?
+  discountedCost  Float?
+  revenue         Float?
+
+  sourcePage      String
+  utmSource       String?
+  utmCampaign     String?
+  utmMedium       String?
+  utmTerm         String?
+  utmContent      String?
+  referenceId     String          @unique
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+// Admin user
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+// Rate limiting for spam protection
+model RateLimit {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  count     Int      @default(1)
+  expiresAt DateTime
+  
+  @@index([ip])
+  @@index([expiresAt])
+}
