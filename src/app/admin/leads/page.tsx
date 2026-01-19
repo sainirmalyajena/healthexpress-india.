@@ -218,9 +218,8 @@ export default async function AdminLeadsPage({
                             </div>
                         </div>
                     )}
+                </main>
             </div>
-                </main >
-            </div >
         );
     } catch (error) {
         return (

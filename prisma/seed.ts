@@ -1,4 +1,4 @@
-import { PrismaClient, Category } from '../src/generated/prisma';
+import { PrismaClient, Category, LeadStatus } from '../src/generated/prisma';
 import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -550,7 +550,7 @@ async function main() {
                 insurance: Math.random() > 0.5 ? 'YES' : 'NO',
                 hasCard,
                 isEmergency: Math.random() > 0.8,
-                status,
+                status: status as LeadStatus,
                 originalCost,
                 discountedCost,
                 revenue,
