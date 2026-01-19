@@ -8,7 +8,7 @@ export const metadata: Metadata = {
     template: "%s | HealthExpress India",
   },
   description: "Find the right surgery at the right hospital across India. Browse our comprehensive surgery directory and connect with top healthcare providers.",
-  keywords: ["surgery", "hospital", "healthcare", "India", "medical", "treatment", "surgery cost", "hospital booking"],
+  keywords: ["surgery", "hospital", "healthcare", "India", "medical", "treatment", "surgery cost", "hospital booking", "affordable surgery", "best surgeons india", "medical tourism india", "health packages", "delhi", "mumbai", "bangalore", "pune", "hyderabad", "chennai"],
   authors: [{ name: "HealthExpress India" }],
   openGraph: {
     type: "website",

@@ -33,6 +33,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
             description: surgery.overview.substring(0, 160),
             type: 'article',
         },
+        keywords: [
+            surgery.name,
+            `${surgery.name} cost India`,
+            `${surgery.name} surgery`,
+            `best hospital for ${surgery.name}`,
+            `${surgery.name} recovery`,
+            'affordable surgery india',
+            'medical tourism india'
+        ],
     };
 }
 
