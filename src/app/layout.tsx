@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Header, Footer } from "@/components/layout";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -53,6 +54,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <WhatsAppButton />
       </body>
     </html>
   );

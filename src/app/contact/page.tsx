@@ -36,7 +36,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <h3 className="font-semibold text-slate-900 mb-1">Phone</h3>
-                                        <p className="text-teal-600 font-medium">+91 1800-XXX-XXXX</p>
+                                        <p className="text-teal-600 font-medium">+91 93078 61041</p>
                                         <p className="text-sm text-slate-500 mt-1">Mon-Sat, 9 AM - 6 PM IST</p>
                                     </div>
                                 </div>
@@ -68,7 +68,7 @@ export default function ContactPage() {
                                     </div>
                                     <div>
                                         <h3 className="font-semibold text-slate-900 mb-1">WhatsApp</h3>
-                                        <p className="text-green-600 font-medium">+91 98XXX-XXXXX</p>
+                                        <p className="text-green-600 font-medium">+91 93078 61041</p>
                                         <p className="text-sm text-slate-500 mt-1">Quick responses</p>
                                     </div>
                                 </div>
