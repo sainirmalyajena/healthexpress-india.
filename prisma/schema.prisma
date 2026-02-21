@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Surgery {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  category        Category
+  overview        String
+  indications     String
+  procedure       String
+  duration        String
+  hospitalStay    String
+  recovery        String
+  risks           String
+  preparation     String
+  postOpCare      String
+  costRangeMin    Int
+  costRangeMax    Int
+  insuranceLikely Boolean  @default(false)
+  symptoms        String[]
+  availableCities String[] @default([])
+  faqs            Json     @default("[]")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  leads           Lead[]
+  doctors         Doctor[]
+}
+
+model Hospital {
+  id              String   @id @default(cuid())
+  name            String
+  city            String
+  specialties     String[]
+  discountPercent Float    @default(0)
+  email           String?  @unique // Optional for migration safety
+  passwordHash    String?
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  leads           Lead[]
+  doctors         Doctor[]
+}
+
+model Doctor {
+  id             String    @id @default(cuid())
+  name           String
+  qualification  String
+  experience     Int
+  about          String
+  image          String
+  isVerified     Boolean   @default(false)
+  accreditations String[]  @default([])
+  email          String?   @unique // Optional for migration
+  passwordHash   String?
+  status         String    @default("ACTIVE")
+  availability   Json      @default("{}")
+  hospitalId     String
+  hospital       Hospital  @relation(fields: [hospitalId], references: [id])
+  surgeries      Surgery[]
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Lead {
+  id             String          @id @default(cuid())
+  fullName       String
+  phone          String
+  email          String?
+  city           String
+  surgeryId      String
+  hospitalId     String?
+  description    String
+  insurance      InsuranceOption @default(NO)
+  hasCard        Boolean         @default(false)
+  isEmergency    Boolean         @default(false)
+  callbackTime   String?
+  status         LeadStatus      @default(NEW)
+  notes          String?         // Internal notes for ops team
+  originalCost   Float?
+  discountedCost Float?
+  revenue        Float?
+  sourcePage     String
+  utmSource      String?
+  utmCampaign    String?
+  utmMedium      String?
+  utmTerm        String?
+  utmContent     String?
+  referenceId    String          @unique
+  otp            String?         // For patient login
+  otpExpires     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  hospital       Hospital?       @relation(fields: [hospitalId], references: [id])
+  surgery        Surgery         @relation(fields: [surgeryId], references: [id])
+  documents      Document[]
+  rating         Int?            // Patient satisfaction rating (1-5)
+  feedback       String?         // Detailed patient feedback
+}
+
+model Document {
+  id        String   @id @default(cuid())
+  name      String
+  type      String   // e.g., 'PDF', 'IMAGE'
+  data      String   // Base64 data
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         String   @default("admin")
+  createdAt    DateTime @default(now())
+}
+
+model RateLimit {
+  id        String   @id @default(cuid())
+  ip        String   @unique
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([ip])
+  @@index([expiresAt])
+}
+
+enum Category {
+  GENERAL_SURGERY
+  ORTHOPEDICS
+  UROLOGY
+  ENT
+  GYNECOLOGY
+  OPHTHALMOLOGY
+  CARDIAC
+  NEURO
+  GASTRO
+  DENTAL
+  COSMETIC
+  PEDIATRIC
+  ONCOLOGY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  ASSIGNED
+  SCHEDULED
+  COMPLETED
+  CLOSED
+}
+
+enum InsuranceOption {
+  YES
+  NO
+  NOT_SURE
+}
+
+enum PartnerStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ONBOARDED
+}
+
+model PartnerRequest {
+  id                String        @id @default(cuid())
+  
+  // Basic Info
+  hospitalName      String
+  registrationNumber String
+  city              String
+  state             String
+  pincode           String
+  
+  // Contact
+  contactPerson     String
+  designation       String
+  email             String
+  phone             String
+  website           String?
+  
+  // Hospital Details
+  hospitalType      String[]
+  specialties       String[]
+  bedCapacity       Int
+  icuBeds           Int?
+  hasOT             Boolean
+  yearsInOperation  Int
+  
+  // Accreditation
+  isNABH            Boolean       @default(false)
+  isJCI             Boolean       @default(false)
+  isISO             Boolean       @default(false)
+  
+  // Facilities
+  has24x7Emergency  Boolean       @default(false)
+  hasAmbulance      Boolean       @default(false)
+  hasPharmacy       Boolean       @default(false)
+  hasDiagnosticLab  Boolean       @default(false)
+  hasBloodBank      Boolean       @default(false)
+  
+  // Additional
+  partnershipReason String
+  monthlyPatients   Int?
+  insuranceTieups   String?
+  
+  // Status tracking
+  status            PartnerStatus @default(PENDING)
+  referenceId       String        @unique
+  comments          String?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+}
