@@ -1,3 +1,5 @@
+'use client';
+
 import Link from 'next/link';
 import { getCategoryLabel } from '@/lib/utils';
 import { CategoryIcon } from '@/components/ui/CategoryIcon';
