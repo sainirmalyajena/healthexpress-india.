@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { PartnerStatus } from '@/generated/prisma';
 
@@ -7,9 +7,10 @@ export async function POST(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session) {
+    // Type casting to access custom role property added in auth.ts callbacks
+    if (!session || (session.user as any)?.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

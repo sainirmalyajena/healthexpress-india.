@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { generateReferenceId } from '@/lib/utils';
-import { sendEmail, emailTemplates } from '@/lib/mailer';
+import { resend } from '@/lib/resend';
+import { AdminNotificationEmail } from '@/emails/AdminNotification';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(request: NextRequest) {
     try {
@@ -89,22 +92,22 @@ export async function POST(request: NextRequest) {
             referenceId
         });
 
-        // Send notification email to admin
+        // Send notification email to admin using Resend
         try {
-            const template = emailTemplates.partnerRequest({
-                hospitalName: partnerRequest.hospitalName,
-                contactPerson: partnerRequest.contactPerson,
-                phone: partnerRequest.phone,
-                city: partnerRequest.city
+            await resend.emails.send({
+                from: 'HealthExpress India <onboarding@resend.dev>', // Update with verified domain if available
+                to: process.env.OPS_EMAIL || 'ops@healthexpressindia.com',
+                subject: `New Partner Application: ${partnerRequest.hospitalName}`,
+                react: AdminNotificationEmail({
+                    referenceId: partnerRequest.referenceId,
+                    fullName: `${partnerRequest.hospitalName} - ${partnerRequest.contactPerson}`,
+                    phone: partnerRequest.phone,
+                    email: partnerRequest.email,
+                    city: partnerRequest.city,
+                    surgeryName: "Partner Onboarding Request",
+                    sourcePage: "/partners"
+                })
             });
-
-            const opsEmail = process.env.OPS_EMAIL || 'ops@healthexpressindia.com';
-            sendEmail({
-                to: opsEmail,
-                subject: template.subject,
-                text: template.text,
-                html: template.html,
-            }).catch(err => console.error('Admin partner alert error:', err));
         } catch (emailErr) {
             console.error('Email preparation error:', emailErr);
         }

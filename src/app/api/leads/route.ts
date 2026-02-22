@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { leadFormSchema } from '@/lib/validations';
 import { generateReferenceId, extractUTMParams } from '@/lib/utils';
-import { sendEmail, emailTemplates } from '@/lib/mailer';
+import { resend } from '@/lib/resend';
+import LeadConfirmation from '@/emails/LeadConfirmation';
+import AdminNotification from '@/emails/AdminNotification';
 import { prisma } from '@/lib/prisma';
+
+export const dynamic = 'force-dynamic';
 
 // Rate limiting disabled for Demo Mode
 async function checkRateLimit(): Promise<boolean> {
@@ -110,33 +114,33 @@ export async function POST(request: NextRequest) {
         try {
             // 1. Send confirmation to Patient if email provided
             if (data.email) {
-                const patientTemplate = emailTemplates.leadConfirmation(data.fullName, referenceId, surgery.name);
-                sendEmail({
+                await resend.emails.send({
+                    from: 'HealthExpress India <onboarding@resend.dev>', // Update to verified domain
                     to: data.email,
-                    subject: patientTemplate.subject,
-                    text: patientTemplate.text,
-                    react: patientTemplate.react,
-                }).catch(err => console.error('Patient email error:', err));
+                    subject: 'HealthExpress India - We received your request',
+                    react: LeadConfirmation({
+                        patientName: data.fullName,
+                        referenceId: referenceId,
+                        surgeryName: surgery.name
+                    })
+                });
             }
 
             // 2. Notify Ops Team (Admin)
-            const adminTemplate = emailTemplates.adminInquiry({
-                referenceId,
-                fullName: data.fullName,
-                phone: data.phone,
-                email: data.email || undefined,
-                city: data.city,
-                surgeryName: surgery.name,
-                sourcePage: body.sourcePage || '/'
+            await resend.emails.send({
+                from: 'HealthExpress India <onboarding@resend.dev>', // Update to verified domain
+                to: process.env.OPS_EMAIL || 'ops@healthexpressindia.com',
+                subject: `New Lead: ${surgery.name} - ${data.fullName}`,
+                react: AdminNotification({
+                    referenceId: referenceId,
+                    fullName: data.fullName,
+                    phone: data.phone,
+                    email: data.email || undefined,
+                    city: data.city,
+                    surgeryName: surgery.name,
+                    sourcePage: body.sourcePage || '/'
+                })
             });
-
-            const opsEmail = process.env.OPS_EMAIL || 'ops@healthexpressindia.com';
-            sendEmail({
-                to: opsEmail,
-                subject: adminTemplate.subject,
-                text: adminTemplate.text,
-                react: adminTemplate.react,
-            }).catch(err => console.error('Admin alert error:', err));
 
         } catch (emailErr) {
             console.error('Email preparation error:', emailErr);

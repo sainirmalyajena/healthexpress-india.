@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSession } from '@/lib/auth';
+import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
-import { sendEmail, emailTemplates } from '@/lib/mailer';
 import { LeadStatus } from '@/generated/prisma';
 
 export async function PATCH(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getSession();
+    const session = await auth();
 
-    if (!session) {
+    // Type casting to access custom role property added in auth.ts callbacks
+    if (!session || (session.user as any)?.role !== 'ADMIN') {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -60,26 +60,8 @@ export async function PATCH(
             }
         });
 
-        // Trigger email notification if status changed and patient has email
-        if (status && updatedLead.email) {
-            try {
-                const template = emailTemplates.statusUpdate(
-                    updatedLead.fullName,
-                    status.replace('_', ' '),
-                    status === 'ASSIGNED' ? `Matched with ${updatedLead.hospital?.name || 'a partner hospital'}.` : undefined
-                );
-
-                await sendEmail({
-                    to: updatedLead.email,
-                    subject: template.subject,
-                    text: template.text,
-                    html: template.html,
-                });
-            } catch (emailError) {
-                console.error('Failed to send status update email:', emailError);
-                // Don't fail the whole request if email fails
-            }
-        }
+        // Note: Status update emails (Resend) are currently handled manually or in a dedicated worker
+        // if automated status alerts are required, they will be implemented here using the new src/lib/resend.ts
 
         return NextResponse.json({ success: true, lead: updatedLead });
     } catch (error) {
@@ -93,8 +75,8 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getSession();
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const session = await auth();
+    if (!session || (session.user as any)?.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     const { id } = await params;
     if (id !== 'export') return NextResponse.json({ error: 'Not found' }, { status: 404 });
