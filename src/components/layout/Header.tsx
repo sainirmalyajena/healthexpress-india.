@@ -31,6 +31,7 @@ export function Header() {
         { href: '/', label: 'Home' },
         { href: '/surgeries', label: 'Surgeries' },
         { href: '/doctors', label: 'Our Doctors' },
+        { href: '/blog', label: 'Medical Blog' },
         { href: '/partners', label: 'Partner with Us' },
         { href: '/contact', label: 'Contact' },
     ];

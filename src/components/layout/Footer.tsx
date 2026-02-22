@@ -12,6 +12,7 @@ export function Footer() {
             { href: '/surgeries?category=CARDIAC', label: 'Cardiac Surgery' },
         ],
         company: [
+            { href: '/blog', label: 'Medical Blog' },
             { href: '/partners', label: 'Hospital Partners' },
             { href: '/contact', label: 'Contact Us' },
             { href: '/privacy', label: 'Privacy Policy' },

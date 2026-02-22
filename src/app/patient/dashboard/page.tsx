@@ -1,244 +1,217 @@
-import { prisma } from '@/lib/prisma';
-import { getPatientSession } from '@/lib/patient-auth';
-import { redirect } from 'next/navigation';
-import DocumentUpload from '@/components/patient/DocumentUpload';
-import FeedbackForm from '@/components/patient/FeedbackForm';
-import { formatDate } from '@/lib/utils';
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import { getPatientSession } from "@/lib/patient-auth";
+import {
+    Clock,
+    CheckCircle2,
+    Stethoscope,
+    FileText,
+    ShieldCheck,
+    MapPin,
+    Calendar,
+    ArrowRight,
+    TrendingUp,
+    MessageSquare,
+    Lock
+} from "lucide-react";
+import Link from "next/link";
 
-export default async function PatientDashboardPage() {
-    const session = await getPatientSession();
+export default async function PatientDashboard() {
+    const patient = await getPatientSession();
 
-    if (!session) redirect('/patient/login');
+    if (!patient) {
+        redirect("/patient/login");
+    }
 
     const lead = await prisma.lead.findUnique({
-        where: { id: session.leadId },
+        where: { id: patient.leadId },
         include: {
             surgery: true,
             hospital: true,
-            documents: {
-                orderBy: { createdAt: 'desc' },
-                select: {
-                    id: true,
-                    name: true,
-                    type: true,
-                    createdAt: true
-                }
-            }
+            documents: true
         }
     });
 
-    if (!lead) redirect('/patient/login');
+    if (!lead) {
+        redirect("/patient/login");
+    }
 
-    // Calculate progress based on status
-    const statuses = ['NEW', 'CONTACTED', 'QUALIFIED', 'ASSIGNED', 'SCHEDULED', 'COMPLETED', 'CLOSED'];
-    const currentStepIndex = statuses.indexOf(lead.status);
-
-    const steps = [
-        { label: 'Inquiry Received', status: 'NEW', description: 'We have received your request.' },
-        { label: 'Consultation', status: 'CONTACTED', description: 'Expert consultation scheduled.' },
-        { label: 'Hospital Assigned', status: 'ASSIGNED', description: lead.hospital ? `Matched with ${lead.hospital.name}` : 'Finding best hospital...' },
-        { label: 'Surgery Scheduled', status: 'SCHEDULED', description: 'Date confirmed. Preparing for admission.' },
-        { label: 'Recovery', status: 'COMPLETED', description: 'Surgery successful. Focus on healing.' },
+    const statusSteps = [
+        { status: 'NEW', label: 'Inquiry Received', icon: MessageSquare },
+        { status: 'QUALIFIED', label: 'Consultation Done', icon: Stethoscope },
+        { status: 'SCHEDULED', label: 'Surgery Scheduled', icon: Calendar },
+        { status: 'COMPLETED', label: 'Recovery Phase', icon: CheckCircle2 },
     ];
 
-    // Status-specific next steps
-    const getNextSteps = () => {
-        switch (lead.status) {
-            case 'NEW':
-                return {
-                    title: 'Welcome to HealthExpress!',
-                    message: 'Your care manager will call you within 2 hours to discuss your surgery requirements.',
-                    icon: '👋'
-                };
-            case 'CONTACTED':
-                return {
-                    title: 'Selecting Hospitals',
-                    message: 'We are vetting the best partner hospitals for your procedure based on your budget and preference.',
-                    icon: '🔬'
-                };
-            case 'ASSIGNED':
-                return {
-                    title: 'Confirm Admission',
-                    message: 'Please review the hospital details and confirm your preferred surgery date with your care manager.',
-                    icon: '🗓️'
-                };
-            case 'SCHEDULED':
-                return {
-                    title: 'Preparation Checklist',
-                    message: 'Ensure you carry your government ID and past medical reports (upload them to your vault below). Bring an attendant.',
-                    icon: '📝'
-                };
-            case 'COMPLETED':
-                return {
-                    title: 'Recovering Well?',
-                    message: 'Your surgery was successful. Please follow the post-operative care instructions provided by the hospital.',
-                    icon: '💊'
-                };
-            case 'CLOSED':
-                return {
-                    title: 'Case Finalized',
-                    message: 'Your case has been successfully closed. We hope you have a speedy and full recovery.',
-                    icon: '✅'
-                };
-            default:
-                return null;
-        }
-    };
-
-    const nextStep = getNextSteps();
+    const currentStatusIndex = statusSteps.findIndex(s => s.status === lead.status);
+    const progressPercent = ((currentStatusIndex + 1) / statusSteps.length) * 100;
 
     return (
-        <div className="space-y-8">
-            {/* Next Steps Banner */}
-            {nextStep && (
-                <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 flex items-start gap-4 animate-fade-in shadow-sm">
-                    <span className="text-3xl">{nextStep.icon}</span>
-                    <div className="flex-1">
-                        <h2 className="text-teal-900 font-bold text-lg mb-1">{nextStep.title}</h2>
-                        <p className="text-teal-700 text-sm md:text-base leading-relaxed">{nextStep.message}</p>
-                    </div>
-                </div>
-            )}
-
-            {/* Post-Op Feedback Form */}
-            {lead.status === 'COMPLETED' && !lead.rating && (
-                <div className="max-w-2xl mx-auto w-full">
-                    <FeedbackForm />
-                </div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Left Column: Timeline */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <h2 className="text-xl font-bold text-slate-900 mb-6">Your Care Journey</h2>
-                        <div className="relative">
-                            {/* Vertical Line */}
-                            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-slate-100"></div>
-
-                            <div className="space-y-8 relative">
-                                {steps.map((step, index) => {
-                                    const stepIndex = statuses.indexOf(step.status);
-                                    const isCompleted = currentStepIndex >= stepIndex;
-                                    const isCurrent = lead.status === step.status;
-
-                                    return (
-                                        <div key={index} className="flex gap-4">
-                                            <div className={`
-                                                w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center border-2 z-10
-                                                ${isCurrent ? 'bg-teal-50 border-teal-600 text-teal-600 ring-4 ring-teal-50' :
-                                                    isCompleted ? 'bg-teal-600 border-teal-600 text-white' : 'bg-white border-slate-300 text-slate-300'}
-                                            `}>
-                                                {isCompleted && !isCurrent ? (
-                                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                                    </svg>
-                                                ) : (
-                                                    <span className="text-xs font-bold">{index + 1}</span>
-                                                )}
-                                            </div>
-                                            <div className="pt-1">
-                                                <h3 className={`font-bold transition-colors ${isCurrent ? 'text-teal-700' : isCompleted ? 'text-slate-900' : 'text-slate-400'}`}>
-                                                    {step.label}
-                                                </h3>
-                                                <p className="text-sm text-slate-500 mt-1 leading-relaxed">{step.description}</p>
-                                            </div>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="bg-white rounded-xl shadow-sm p-6">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-bold text-slate-900">Document Vault</h2>
-                            <DocumentUpload />
-                        </div>
-
-                        {lead.documents && lead.documents.length > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {lead.documents.map((doc) => (
-                                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-slate-50/50 group hover:bg-white hover:shadow-md transition-all">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-xl shadow-sm">
-                                                {doc.type === 'PDF' ? '📄' : '🖼️'}
-                                            </div>
-                                            <div>
-                                                <p className="font-bold text-slate-900 text-sm truncate max-w-[150px]">{doc.name}</p>
-                                                <p className="text-[10px] text-slate-500 font-medium">{formatDate(doc.createdAt)}</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-[10px] font-bold text-teal-600 bg-teal-50 px-2 py-1 rounded">
-                                            Verified
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="border-2 border-dashed border-slate-200 rounded-lg p-8 text-center bg-slate-50/30">
-                                <div className="mx-auto w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3">
-                                    <svg className="w-6 h-6 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </div>
-                                <p className="text-slate-500 font-medium">No documents uploaded yet.</p>
-                                <p className="text-xs text-slate-400 mt-1">Upload reports, insurance cards, or ID proof.</p>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                {/* Right Column: Details */}
-                <div className="space-y-6">
-                    <div className="bg-teal-900 rounded-xl p-6 text-white shadow-lg shadow-teal-900/20">
-                        <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
-                            <span>🏥</span> Surgery Details
-                        </h3>
-                        <div className="space-y-4 text-sm opacity-90">
-                            <div>
-                                <p className="text-teal-200 text-xs uppercase tracking-wider mb-1 font-bold">Procedure</p>
-                                <p className="font-bold text-xl leading-tight">{lead.surgery.name}</p>
-                            </div>
-                            <div className="py-3 border-y border-white/10">
-                                <p className="text-teal-200 text-xs uppercase tracking-wider mb-2 font-bold">Current Status</p>
-                                <span className="inline-block px-3 py-1 bg-white/20 rounded-full text-xs font-bold backdrop-blur-sm">
-                                    {lead.status.replace('_', ' ')}
+        <div className="min-h-screen bg-slate-50 pb-12">
+            {/* Header / Banner */}
+            <div className="bg-slate-900 pt-16 pb-32">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <h1 className="text-3xl font-bold text-white mb-2">Welcome, {lead.fullName}</h1>
+                            <div className="flex items-center gap-4 text-slate-400 text-sm">
+                                <span className="flex items-center gap-1">
+                                    <ShieldCheck className="w-4 h-4 text-teal-500" />
+                                    Case ID: {lead.referenceId}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <MapPin className="w-4 h-4" />
+                                    {lead.city}
                                 </span>
                             </div>
-                            {lead.hospital && (
-                                <div>
-                                    <p className="text-teal-200 text-xs uppercase tracking-wider mb-1 font-bold">Hospital</p>
-                                    <p className="font-bold text-lg">{lead.hospital.name}</p>
-                                    <div className="flex items-center gap-2 mt-1 text-teal-300">
-                                        <span className="text-xs">📍 {lead.hospital.city}</span>
-                                    </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <Link
+                                href="/contact"
+                                className="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-semibold backdrop-blur-sm transition-all"
+                            >
+                                Contact Coordinator
+                            </Link>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+                    {/* Main Progress Column */}
+                    <div className="lg:col-span-2 space-y-8">
+
+                        {/* Status Tracker */}
+                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                            <h2 className="text-xl font-bold text-slate-900 mb-8">Surgery Progress</h2>
+
+                            <div className="relative">
+                                {/* Progress Bar Background */}
+                                <div className="absolute top-1/2 left-0 w-full h-1 bg-slate-100 -translate-y-1/2 rounded-full"></div>
+                                {/* Progress Bar Active */}
+                                <div
+                                    className="absolute top-1/2 left-0 h-1 bg-teal-500 -translate-y-1/2 rounded-full transition-all duration-1000"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
+
+                                <div className="relative flex justify-between items-center">
+                                    {statusSteps.map((step, idx) => {
+                                        const StepIcon = step.icon;
+                                        const isCompleted = idx <= currentStatusIndex;
+                                        const isCurrent = idx === currentStatusIndex;
+
+                                        return (
+                                            <div key={step.status} className="flex flex-col items-center">
+                                                <div className={`w-12 h-12 rounded-full flex items-center justify-center border-4 transition-all duration-500 ${isCompleted
+                                                    ? 'bg-teal-500 border-teal-100 text-white shadow-lg shadow-teal-200'
+                                                    : 'bg-white border-slate-100 text-slate-300'
+                                                    }`}>
+                                                    <StepIcon className="w-5 h-5" />
+                                                </div>
+                                                <span className={`mt-3 text-xs font-bold uppercase tracking-wider ${isCurrent ? 'text-teal-600' : isCompleted ? 'text-slate-900' : 'text-slate-400'
+                                                    }`}>
+                                                    {step.label}
+                                                </span>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
-                            )}
-                            {/* Show cost only if assigned/discussed */}
-                            {(lead.status === 'ASSIGNED' || lead.status === 'SCHEDULED' || lead.status === 'COMPLETED') && lead.discountedCost && (
-                                <div className="pt-4 border-t border-white/20 mt-4">
-                                    <p className="text-teal-200 text-xs uppercase tracking-wider mb-1 font-bold">Estimated Cost</p>
-                                    <p className="font-bold text-2xl">₹ {lead.discountedCost.toLocaleString('en-IN')}</p>
-                                    {lead.originalCost && lead.originalCost > lead.discountedCost && (
-                                        <div className="flex items-center gap-2 mt-1">
-                                            <p className="text-xs text-teal-300 line-through">₹ {lead.originalCost.toLocaleString('en-IN')}</p>
-                                            <span className="text-[10px] bg-green-500 text-white px-1.5 py-0.5 rounded font-bold">SAVED {Math.round((lead.originalCost - lead.discountedCost) / lead.originalCost * 100)}%</span>
-                                        </div>
+                            </div>
+
+                            <div className="mt-12 p-6 bg-teal-50 rounded-2xl border border-teal-100 flex items-start gap-4">
+                                <div className="p-2 bg-white rounded-lg shadow-sm">
+                                    <Clock className="w-5 h-5 text-teal-600" />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-teal-900">Current Status: {lead.status}</h3>
+                                    <p className="text-sm text-teal-800/80 mt-1">
+                                        We are currently {lead.status === 'NEW' ? 'reviewing your case details' : 'moving forward with your clinical plan'}. Your care coordinator will update you shortly.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Surgery Details Card */}
+                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold text-slate-900">Your Procedure</h2>
+                                <Link
+                                    href={`/surgeries/${lead.surgery.slug}`}
+                                    className="text-sm font-semibold text-teal-600 hover:underline flex items-center gap-1"
+                                >
+                                    View Guide <ArrowRight className="w-4 h-4" />
+                                </Link>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6">
+                                <div className="p-5 bg-slate-50 rounded-2xl">
+                                    <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Recommended Procedure</p>
+                                    <p className="text-lg font-bold text-slate-900">{lead.surgery.name}</p>
+                                </div>
+                                <div className="p-5 bg-slate-50 rounded-2xl">
+                                    <p className="text-xs uppercase tracking-wider text-slate-400 font-bold mb-1">Hospital Partner</p>
+                                    <p className="text-lg font-bold text-slate-900">{lead.hospital?.name || 'Assessing Best Partner'}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="space-y-8">
+
+                        {/* Financial Snapshot */}
+                        <div className="bg-gradient-to-br from-teal-600 to-teal-800 rounded-3xl p-8 text-white shadow-xl shadow-teal-900/20">
+                            <div className="flex items-center gap-3 mb-6">
+                                <TrendingUp className="w-6 h-6" />
+                                <h2 className="text-xl font-bold">Cost Estimate</h2>
+                            </div>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <p className="text-teal-100 text-sm">Estimated Treatment Cost</p>
+                                    <p className="text-3xl font-bold mt-1">₹{lead.discountedCost?.toLocaleString() || 'TBD'}</p>
+                                    {lead.originalCost && lead.originalCost > (lead.discountedCost || 0) && (
+                                        <p className="text-sm text-teal-200 line-through">₹{lead.originalCost.toLocaleString()}</p>
                                     )}
+                                </div>
+
+                                <div className="pt-4 border-t border-white/10">
+                                    <p className="text-xs text-teal-200 flex items-center gap-1">
+                                        <Lock className="w-3 h-3" /> Exclusive HealthExpress Discount Applied
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Documents Section */}
+                        <div className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-xl font-bold text-slate-900">Lab Reports</h2>
+                                <FileText className="w-5 h-5 text-slate-400" />
+                            </div>
+
+                            {lead.documents.length > 0 ? (
+                                <ul className="space-y-3">
+                                    {lead.documents.map(doc => (
+                                        <li key={doc.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                            <span className="text-sm font-medium text-slate-700 truncate">{doc.name}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase">{doc.type}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <div className="text-center py-6 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                    <p className="text-sm text-slate-500">No documents uploaded</p>
+                                    <button className="mt-3 text-sm font-bold text-teal-600 hover:text-teal-700">
+                                        Upload Reports
+                                    </button>
                                 </div>
                             )}
                         </div>
-                    </div>
 
-                    <div className="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
-                        <h3 className="font-bold text-slate-900 mb-2">Need Help?</h3>
-                        <p className="text-sm text-slate-600 mb-4 leading-relaxed">
-                            Your dedicated care manager is tracking your journey and is ready to assist.
-                        </p>
-                        <a href="tel:9307861041" className="flex items-center justify-center gap-2 w-full bg-slate-900 text-white py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-md active:scale-95">
-                            <span>📞</span> Call Care Manager
-                        </a>
                     </div>
                 </div>
             </div>
