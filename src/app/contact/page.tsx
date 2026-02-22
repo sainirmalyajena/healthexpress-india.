@@ -16,16 +16,18 @@ export default function ContactPage() {
         const data = {
             fullName: formData.get('name') as string,
             phone: formData.get('phone') as string,
+            email: '', // Required by schema as optional string
             city: formData.get('city') as string || 'Not specified',
-            surgeryId: formData.get('surgery') as string || undefined,
+            surgeryId: formData.get('surgery') as string || 'General Consultation',
             description: `General inquiry from contact form. Surgery: ${formData.get('surgery') || 'Not specified'}`,
             insurance: (formData.get('insurance') === 'yes' ? 'YES' : 'NO') as 'YES' | 'NO',
             callbackTime: formData.get('time') as string || undefined,
             sourcePage: 'contact',
+            consent: true,
         };
 
         try {
-            const response = await fetch('/api/lead', {
+            const response = await fetch('/api/leads', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data),

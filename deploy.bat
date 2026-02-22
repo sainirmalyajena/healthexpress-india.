@@ -4,6 +4,7 @@ git add .
 set "timestamp=%date% %time%"
 git commit -m "feat: Project Update - %timestamp%"
 git push origin main
+git push origin2 main
 echo.
 echo Deployment triggered! Vercel will now update automatically.
 pause

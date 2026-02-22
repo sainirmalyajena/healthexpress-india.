@@ -99,6 +99,8 @@ export async function POST(request: NextRequest) {
                 city: data.city,
                 surgeryId: data.surgeryId,
                 description: `Inquiry for ${surgery.name}`,
+                insurance: data.insurance,
+                callbackTime: data.callbackTime,
                 sourcePage: body.sourcePage || '/',
                 utmSource,
                 utmCampaign,
