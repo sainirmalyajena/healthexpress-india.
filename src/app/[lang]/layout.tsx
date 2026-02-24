@@ -8,6 +8,7 @@ import "./globals.css";
 import { getDictionary } from "@/get-dictionary";
 import { type Locale } from "@/i18n-config";
 import { GoogleTagManager } from '@next/third-parties/google';
+import { Analytics as VercelAnalytics } from '@vercel/analytics/next';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -97,6 +98,7 @@ export default async function RootLayout({
         <Footer lang={lang} dict={dictionary.footer} />
         <WhatsAppButton />
         <StickyMobileCTA lang={lang} dict={dictionary.sticky_cta} />
+        <VercelAnalytics />
       </body>
     </html>
   );
